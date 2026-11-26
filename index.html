@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주짓수 홈 트레이닝</title>
+<meta name="theme-color" content="#d6332b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="주짓수">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE everyday, coach-grade: a jiu-jitsu gym's round clock plus a training log
+   IDEA the gym wall: round timer over the tatami, weekly board and a paper log beside it
+   PICTURE big countdown ring with the current move drawn inside; drawn figure per move
+   COLOUR white ground, tatami red for work, green rest, blue round rest, amber warm-up, violet cool-down, orange target muscle
+   TYPE IBM Plex Sans KR 700 + 400, tabular numerals for the clock
+   LAYOUT stats row, week strip, session bar, timer, move cards, log (calendar + history), settings */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0f1114);--ink:light-dark(#15171a,#eceef1);--mute:light-dark(#5b6068,#a2a8b1);--work:light-dark(#d6332b,#ef4b42);--rest:light-dark(#2f7d63,#47b08c);--round:light-dark(#3a5bbf,#6d8cf0);--warm:light-dark(#b86e00,#e0a03a);--cool:light-dark(#6a4fb8,#9d86e8);--panel:light-dark(#f5f3f1,#1a1d21);--line:light-dark(#e2ded9,#2c3036);--fig:light-dark(#2a2f37,#d5d9df);--mat:light-dark(#dfe6ee,#232a33);--hl:#ff8a00;--prop:light-dark(#4a4f57,#9aa1ab)}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 "IBM Plex Sans KR",system-ui,sans-serif;overflow-x:clip}
+.band{padding-block:clamp(18px,3.2vw,40px);padding-inline:max(5vw,16px)}
+.wrap{max-width:1140px;margin:0 auto}
+h1{font-size:clamp(30px,4.6vw,44px);line-height:1.08;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:24px;line-height:1.2;margin:0 0 12px}
+h3{font-size:18px;line-height:1.3;margin:0 0 4px}
+.lede{color:var(--mute);margin:0 0 14px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--panel);border-radius:14px;padding:10px 14px}
+.kpi b{display:block;font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi span{font-size:13.5px;color:var(--mute)}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-bottom:12px}
+.wd{font:inherit;text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:8px;cursor:pointer;display:grid;gap:2px;align-content:start;min-height:80px}
+.wd b{font-size:16px}
+.wd span{font-size:12.5px;color:var(--mute);line-height:1.35}
+.wd .bjj{color:var(--work);font-weight:700}
+.wd .ck{font-size:13px;color:var(--rest);font-weight:700}
+.wd[aria-pressed=true]{border:2px solid var(--ink)}
+.wd.today b::after{content:" 오늘";font-size:12px;color:var(--work)}
+.sbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:14px}
+.sbar .nm{font-size:20px;font-weight:700;line-height:1.25}
+.sbar .fc{font-size:14px;color:var(--mute)}
+.step{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.step button{font:inherit;width:44px;height:44px;border:0;background:var(--bg);color:var(--ink);font-size:20px;cursor:pointer}
+.step output{min-width:88px;text-align:center;font-size:15px;font-variant-numeric:tabular-nums}
+.tg{display:inline-flex;align-items:center;gap:6px;font-size:15px;min-height:44px;cursor:pointer}
+.tg input{width:20px;height:20px;accent-color:var(--work)}
+.pill{font:inherit;font-size:15px;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.reco{font-size:14px;background:var(--panel);border-radius:10px;padding:6px 12px}
+.timer{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(16px,3vw,36px);background:var(--panel);border-radius:22px;padding:clamp(16px,3vw,28px);border-top:10px solid var(--c,var(--work))}
+.ringbox{position:relative;aspect-ratio:1;max-width:420px;width:100%;margin:0 auto}
+.ringbox>svg{position:absolute;inset:0;width:100%;height:100%}
+.center{position:absolute;inset:13%;display:grid;place-items:center;text-align:center;align-content:center;gap:2px}
+.phase{font-weight:700;font-size:18px;color:var(--c,var(--work))}
+.count{font-size:clamp(60px,11vw,100px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.mini{width:78%;aspect-ratio:2/1}
+.mini svg{width:100%;height:100%}
+.info{display:grid;align-content:start;gap:14px}
+.now{font-size:clamp(26px,3.6vw,34px);font-weight:700;line-height:1.15;letter-spacing:-.01em}
+.cue{margin:0;color:var(--mute)}
+.stats{display:flex;flex-wrap:wrap;gap:8px}
+.stats span{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:4px 12px;font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.next{font-size:15px;color:var(--mute)}
+.next b{color:var(--ink)}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--c,var(--work));transition:width .3s}
+.ctl{display:flex;flex-wrap:wrap;gap:10px}
+.ctl button{font:inherit;font-size:16px;min-height:48px;padding:0 18px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.ctl .go{background:var(--c,var(--work));border-color:transparent;color:#fff;font-weight:700;min-width:120px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--hl);outline-offset:2px}
+.tip{font-size:14px;color:var(--mute);margin:0}
+.done{margin-top:16px;border:2px solid var(--rest);border-radius:18px;padding:18px}
+.done h3{color:var(--rest)}
+.rpe{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin:8px 0}
+.rpe button{font:inherit;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;font-weight:700}
+.rpe button[aria-pressed=true]{background:var(--work);border-color:var(--work);color:#fff}
+.rpel{display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
+.note{width:100%;font:inherit;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin:6px 0 10px}
+.save{font:inherit;font-weight:700;min-height:48px;padding:0 20px;border-radius:12px;border:0;background:var(--rest);color:#fff;cursor:pointer}
+.sub{font-size:15px;font-weight:700;color:var(--mute);margin:18px 0 8px}
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.sm{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:8px}
+.sm .pic{border-radius:8px}
+.sm b{font-size:15px;display:block;line-height:1.3}
+.sm span{font-size:13px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.card{border:1px solid var(--line);border-radius:18px;padding:16px;display:grid;grid-template-rows:auto auto 1fr;gap:6px}
+.card.on{box-shadow:0 0 0 2px var(--work) inset}
+.no{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--work);color:#fff;font-weight:700;font-size:14px;margin-right:8px;vertical-align:2px}
+.tag{display:inline-block;font-size:12.5px;border:1px solid var(--line);border-radius:6px;padding:0 6px;margin-left:6px;vertical-align:2px;color:var(--mute);white-space:nowrap}
+.tag.sub2{border-color:var(--warm);color:var(--warm)}
+.pic{background:var(--panel);border-radius:12px;aspect-ratio:2/1;overflow:hidden}
+.pic svg{width:100%;height:100%;display:block}
+.card ul{margin:0;padding-left:1.1em;font-size:15px}
+.hs{font-size:14px;color:var(--work);margin:4px 0 0}
+.orig{font-size:13.5px;color:var(--warm);margin:4px 0 0}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;color:var(--mute);margin:0 0 12px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.box{border:1px solid var(--line);border-radius:18px;padding:18px}
+.box ul,.box ol{margin:0;padding-left:1.2em}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
+.cal .h{font-size:12.5px;color:var(--mute)}
+.cal .d{border-radius:10px;padding:6px 0;font-size:14px;font-variant-numeric:tabular-nums;min-height:44px;display:grid;place-items:center;gap:1px}
+.cal .d.x{background:var(--work);color:#fff;font-weight:700}
+.cal .d.t{box-shadow:0 0 0 2px var(--ink) inset}
+.cal .d.o{opacity:.3}
+.calh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.calh button{font:inherit;width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.hist{list-style:none;margin:0;padding:0}
+.hist li{display:grid;grid-template-columns:5.2em minmax(0,1fr) auto;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:14.5px}
+.hist li:first-child{border-top:0}
+.hist .r{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--mute)}
+.hist .nt{display:block;color:var(--mute);font-size:13.5px}
+.sel{font:inherit;font-size:16px;min-height:44px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
+.sync{font-size:13.5px;color:var(--mute)}
+.foot{font-size:14px;color:var(--mute)}
+@media(max-width:860px){.timer{grid-template-columns:minmax(0,1fr)}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.grid,.two,.strip{grid-template-columns:minmax(0,1fr)}.week{grid-template-columns:repeat(4,minmax(0,1fr))}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ctl button{flex:1 1 auto}.rpe{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+
+<section class="band">
+ <div class="wrap">
+  <h1>주짓수 홈 트레이닝</h1>
+  <p class="lede">요일별 통합 루틴 · 워밍업 4분 + 7동작 × 라운드(40초 운동/20초 휴식/라운드 사이 60초) + 쿨다운 3분 · 3라운드 약 29분</p>
+  <div class="kpis">
+   <div class="kpi"><b id="kStreak">0일</b><span>연속 기록</span></div>
+   <div class="kpi"><b id="kWeek">0/7</b><span>이번 주</span></div>
+   <div class="kpi"><b id="kMonth">0회</b><span>이번 달</span></div>
+   <div class="kpi"><b id="kTotal">0회</b><span>전체</span></div>
+  </div>
+  <div class="week" id="week" role="group" aria-label="요일 선택"></div>
+
+  <div class="sbar">
+   <div><div class="nm" id="sName"></div><div class="fc" id="sFocus"></div></div>
+   <div class="step" aria-label="라운드 수"><button type="button" id="rMinus" aria-label="라운드 줄이기">−</button><output id="rOut">3라운드</output><button type="button" id="rPlus" aria-label="라운드 늘리기">+</button></div>
+   <label class="tg"><input type="checkbox" id="optWarm" checked>워밍업</label>
+   <label class="tg"><input type="checkbox" id="optCool" checked>쿨다운</label>
+   <button type="button" class="pill" id="manual">타이머 없이 완료 체크</button>
+  </div>
+  <p class="reco" id="reco"></p>
+
+  <div class="timer" id="timer">
+   <div class="ringbox">
+    <svg viewBox="0 0 200 200" aria-hidden="true">
+     <circle cx="100" cy="100" r="90" fill="none" stroke="var(--line)" stroke-width="10"/>
+     <circle id="arc" cx="100" cy="100" r="90" fill="none" stroke="var(--c,var(--work))" stroke-width="10" stroke-linecap="round" transform="rotate(-90 100 100)" stroke-dasharray="565.5" stroke-dashoffset="0"/>
+    </svg>
+    <div class="center">
+     <div class="phase" id="phase">준비</div>
+     <div class="count" id="count">45</div>
+     <div class="mini" id="mini"></div>
+    </div>
+   </div>
+   <div class="info">
+    <div>
+     <div class="now" id="now"></div>
+     <p class="cue" id="cue"></p>
+    </div>
+    <div class="stats"><span id="where"></span><span id="left"></span></div>
+    <div class="bar"><i id="prog"></i></div>
+    <div class="next" id="next"></div>
+    <div class="ctl">
+     <button class="go" id="go" type="button">시작</button>
+     <button id="prev" type="button">이전</button>
+     <button id="skip" type="button">다음</button>
+     <button id="restart" type="button">처음부터</button>
+    </div>
+    <p class="tip">마지막 3초, 구간 전환, 좌우 바꿀 때 소리가 나. 무음 모드면 소리가 안 날 수 있어. 운동 중에는 화면이 꺼지지 않게 해 둬.</p>
+   </div>
+  </div>
+
+  <div class="done" id="done" hidden>
+   <h3 id="doneTitle">완료! 기록에 체크됐어</h3>
+   <div>오늘 체감 강도는? (RPE)</div>
+   <div class="rpe" id="rpe"></div>
+   <div class="rpel"><span>1–4 쉬움</span><span>5–6 적당</span><span>7–8 힘듦</span><span>9–10 한계</span></div>
+   <label for="note" class="sub" style="display:block;margin-top:12px">메모 (선택)</label>
+   <input class="note" id="note" maxlength="140" placeholder="예: 프레스는 두 손으로, 왼쪽 허벅지 괜찮음">
+   <button type="button" class="save" id="saveDone">기록 저장</button>
+  </div>
+ </div>
+</section>
+
+<section class="band" style="padding-top:0">
+ <div class="wrap">
+  <h2 id="cardsTitle">동작</h2>
+  <p class="legend"><span><i style="background:var(--hl)"></i>주로 쓰는 근육</span><span><i style="background:var(--fig);opacity:.4"></i>먼 쪽 팔·다리</span><span><i style="background:var(--work)"></i>움직이는 방향</span><span><i style="background:var(--warm)"></i>재활 대체 동작</span></p>
+  <div class="sub" id="warmH">워밍업 · 45초씩</div>
+  <div class="strip" id="warmList"></div>
+  <div class="sub">본 운동 · 7동작</div>
+  <div class="grid" id="cards"></div>
+  <div class="sub" id="coolH">쿨다운 · 60초씩</div>
+  <div class="strip" id="coolList"></div>
+ </div>
+</section>
+
+<section class="band" style="padding-top:0">
+ <div class="wrap two">
+  <div class="box">
+   <div class="calh"><button type="button" id="calPrev" aria-label="이전 달">‹</button><h3 id="calTitle" style="margin:0"></h3><button type="button" id="calNext" aria-label="다음 달">›</button></div>
+   <div class="cal" id="cal"></div>
+  </div>
+  <div class="box">
+   <h3>최근 기록</h3>
+   <ul class="hist" id="hist"></ul>
+  </div>
+ </div>
+</section>
+
+<section class="band" style="padding-top:0">
+ <div class="wrap two">
+  <div class="box">
+   <h3>설정</h3>
+   <label for="phaseSel" style="display:block;font-size:15px;margin:6px 0 4px">부상 모드 (햄스트링)</label>
+   <select class="sel" id="phaseSel">
+    <option value="1">재활 1단계 · 보호 (지금)</option>
+    <option value="2">재활 2단계 · 근력 재건</option>
+    <option value="3">재활 3단계 · 복귀 준비</option>
+    <option value="4">제한 없음 · 부상 없음</option>
+   </select>
+   <p class="tip" style="margin:6px 0 10px">단계에 맞지 않는 동작은 자동으로 안전한 동작으로 바뀌어. 재활 페이지의 기준을 통과했을 때만 올려.</p>
+   <label class="tg"><input type="checkbox" id="optSound" checked>효과음</label>
+   <label class="tg" id="voiceWrap" hidden><input type="checkbox" id="optVoice">음성 안내 (동작 이름 읽어주기)</label>
+   <p class="sync" id="sync">기록: 이 기기에 저장됨</p>
+   <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+    <button type="button" class="pill" id="exportBtn">기록 내보내기</button>
+    <button type="button" class="pill" id="importBtn">기록 가져오기</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+   </div>
+   <p class="tip" style="margin:6px 0 0">기기를 바꾸거나 브라우저 데이터를 지우기 전에 내보내기로 백업해 둬. 가져오기는 기존 기록과 합쳐져.</p>
+   <p class="sync" id="updateMsg" hidden><button type="button" class="pill" id="updateBtn">새 버전이 있어 · 눌러서 새로고침</button></p>
+  </div>
+  <div class="box">
+   <h3>진행 원칙</h3>
+   <ol>
+    <li>같은 루틴에서 체감 강도 6 이하가 2번 연속이면 라운드 +1 (최대 5)</li>
+    <li>9–10이 나오면 다음엔 라운드 −1 또는 휴식을 늘리기</li>
+    <li>라운드를 늘리기 전에 내려가는 시간 3초 → 5초로 먼저 올려도 좋아</li>
+    <li>한 팔 동작이 버거우면 두 손으로. 자세가 무게보다 먼저</li>
+    <li>재활 루틴은 이것과 별도로 매일. 통증 3점 넘는 동작은 쉬운 버전으로</li>
+   </ol>
+  </div>
+ </div>
+</section>
+
+<section class="band" style="padding-top:0">
+ <div class="wrap two">
+  <div class="box">
+   <h3>왜 이렇게 짰나</h3>
+   <ul>
+    <li><b>앉아서 숙이는 일</b>에 맞춰 매 루틴에 등·엉덩이·후면사슬 동작을 넣었어 (로우, 브릿지·힙 쓰러스트·RDL, 엎드려 Y 레이즈)</li>
+    <li><b>주짓수</b>: 그립(수건), 프레임(프레스·고블릿), 베이스(스쿼트·사이드 워크), 힙 이스케이프, 고관절 가동성</li>
+    <li>상체 날 다음에 하체 날을 둬서 같은 부위가 연속으로 지치지 않게</li>
+    <li>수·토 주짓수 날은 기본 2라운드의 가벼운 프렙, 일요일은 회복·자세 리셋</li>
+   </ul>
+  </div>
+  <div class="box">
+   <h3>이 앱이 못 하는 것</h3>
+   <ul>
+    <li>실제 사진·영상 시범은 없어. 그림이 헷갈리는 동작은 동작 이름으로 영상을 찾아봐</li>
+    <li>알림을 보낼 수 없어. 매일 운동 알림은 휴대폰 알람으로 맞춰 둬</li>
+    <li>폼 체크나 통증 판단은 못 해. 재활 단계 판정은 물리치료사에게</li>
+    <li>기록은 이 기기 브라우저에만 저장돼. 기기를 바꿀 땐 설정에서 내보내기 → 새 기기에서 가져오기</li>
+   </ul>
+  </div>
+ </div>
+</section>
+
+<section class="band" style="padding-top:0">
+ <div class="wrap"><p class="foot">장비: 덤벨 15kg 1개, 튼튼한 의자, 수건, 계단. 일반적인 운동 가이드이며 의료 조언을 대신하지 않아.</p></div>
+</section>
+
+<script>
+{
+/* ---------- figure renderer ---------- */
+const D2=(a,b,w,c,o)=>`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${c||'var(--fig)'}" stroke-width="${w}" stroke-linecap="round"${o?` opacity="${o}"`:''}/>`;
+const DB=(x,y,v)=>v?`<rect x="${x-1.5}" y="${y-10}" width="3" height="20" fill="var(--prop)"/><rect x="${x-7}" y="${y-14}" width="14" height="6" rx="2" fill="var(--prop)"/><rect x="${x-7}" y="${y+8}" width="14" height="6" rx="2" fill="var(--prop)"/>`:`<rect x="${x-10}" y="${y-1.5}" width="20" height="3" fill="var(--prop)"/><rect x="${x-14}" y="${y-7}" width="6" height="14" rx="2" fill="var(--prop)"/><rect x="${x+8}" y="${y-7}" width="6" height="14" rx="2" fill="var(--prop)"/>`;
+const CHAIR=(x,y,w)=>`<rect x="${x}" y="${y}" width="${w}" height="6" rx="2" fill="var(--prop)"/><line x1="${x+4}" y1="${y+6}" x2="${x+4}" y2="104" stroke="var(--prop)" stroke-width="3"/><line x1="${x+w-4}" y1="${y+6}" x2="${x+w-4}" y2="104" stroke="var(--prop)" stroke-width="3"/>`;
+const props={db:DB,chair:CHAIR,
+ table:()=>`<rect x="28" y="20" width="150" height="6" rx="2" fill="var(--prop)"/><line x1="34" y1="26" x2="34" y2="104" stroke="var(--prop)" stroke-width="3"/><line x1="172" y1="26" x2="172" y2="40" stroke="var(--prop)" stroke-width="3"/>`,
+ block:(x,y,w)=>`<rect x="${x}" y="${y}" width="${w}" height="${104-y}" rx="3" fill="var(--prop)" opacity=".75"/>`,
+ wall:x=>`<rect x="${x}" y="8" width="7" height="96" fill="var(--prop)" opacity=".6"/>`,
+ towel:(a,b,c,d)=>`<path d="M${a} ${b}Q${a+6} ${(b+d)/2} ${c} ${d}" stroke="var(--hl)" stroke-width="3" fill="none" opacity=".8"/>`,
+ pillow:(x,y)=>`<ellipse cx="${x}" cy="${y}" rx="9" ry="6" fill="var(--prop)" opacity=".7"/>`};
+const FRONT=['db','towel','pillow'];
+const fig=z=>{
+ const [h,s,p,eN,wN,eF,wF,kN,aN,kF,aF]=z.j,hl=z.hl||'',far='.38',X=z.x||[];
+ let o=`<svg viewBox="0 0 240 120" role="img" aria-label="${z.t} 자세"><defs><marker id="m" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--work)"/></marker></defs>`;
+ o+=`<rect x="4" y="104" width="232" height="8" rx="3" fill="var(--mat)"/>`;
+ X.filter(q=>!FRONT.includes(q[0])).forEach(q=>o+=props[q[0]](...q.slice(1)));
+ o+=D2(s,eF,9,0,far)+D2(eF,wF,8,0,far)+`<circle cx="${wF[0]}" cy="${wF[1]}" r="4.5" fill="var(--fig)" opacity="${far}"/>`;
+ o+=D2(p,kF,13,0,far)+D2(kF,aF,10,0,far)+`<circle cx="${aF[0]}" cy="${aF[1]}" r="5" fill="var(--fig)" opacity="${far}"/>`;
+ o+=D2(s,p,21);
+ if(/core|back/.test(hl))o+=D2(s,p,9,'var(--hl)');
+ o+=`<circle cx="${p[0]}" cy="${p[1]}" r="11" fill="var(--fig)"/>`;
+ if(/glute/.test(hl))o+=`<circle cx="${p[0]}" cy="${p[1]}" r="6" fill="var(--hl)"/>`;
+ o+=D2(s,[(s[0]*2+h[0])/3,(s[1]*2+h[1])/3],8)+`<circle cx="${h[0]}" cy="${h[1]}" r="11" fill="var(--fig)"/>`;
+ o+=D2(p,kN,13)+D2(kN,aN,10)+`<circle cx="${aN[0]}" cy="${aN[1]}" r="5" fill="var(--fig)"/>`;
+ if(/quad|add|ham/.test(hl))o+=D2(p,kN,5,'var(--hl)');
+ if(/calf/.test(hl))o+=D2(kN,aN,4,'var(--hl)');
+ X.filter(q=>q[0]==='pillow').forEach(q=>o+=props.pillow(q[1],q[2]));
+ o+=D2(s,eN,9)+D2(eN,wN,8)+`<circle cx="${wN[0]}" cy="${wN[1]}" r="4.5" fill="var(--fig)"/>`;
+ if(/arm/.test(hl))o+=D2(s,eN,3.5,'var(--hl)')+D2(eN,wN,3,'var(--hl)');
+ if(/shoulder/.test(hl))o+=`<circle cx="${s[0]}" cy="${s[1]}" r="6" fill="var(--hl)"/>`;
+ X.filter(q=>q[0]==='db'||q[0]==='towel').forEach(q=>o+=props[q[0]](...q.slice(1)));
+ (z.a||[]).forEach(d=>{const both=d[0]==='!';o+=`<path d="${both?d.slice(1):d}" fill="none" stroke="var(--work)" stroke-width="3" stroke-linecap="round" marker-end="url(#m)"${both?' marker-start="url(#m)"':''}/>`});
+ return o+'</svg>';
+};
+
+/* ---------- poses: [head, shoulder, hip, elbowN, wristN, elbowF, wristF, kneeN, ankleN, kneeF, ankleF] ---------- */
+const sup=[[24,90],[42,94],[110,96]];
+const std=[[120,30],[120,44],[120,74]];
+const stdL=[[117,90],[115,103],[125,90],[127,103]];
+const hiPl=[[34,46],[50,54],[132,68],[52,78],[54,100],[56,78],[58,100],[178,84],[222,98],[180,84],[224,98]];
+const DSQ=[[124,40],[120,54],[104,80],[132,70],[138,64],[134,72],[140,66],[146,80],[144,104],[148,82],[146,104]];
+const BRG=[[24,92],[42,96],[108,72],[66,100],[92,100],[64,100],[90,100],[146,58],[164,102],[148,60],[166,102]];
+const J=(a,b)=>a.concat(b);
+const M={
+ /* warm-up & cool-down */
+ catcow:{t:'고양이-소',j:[[36,62],[52,58],[132,58],[54,80],[56,100],[58,80],[60,100],[134,100],[170,100],[136,100],[172,100]],hl:'back',a:['!M92 22 L92 44'],c:'네발 자세에서 등을 둥글게 말았다가 천천히 펴기. 호흡에 맞춰.',h:['내쉬며 말고 들이쉬며 펴기','통증 없는 범위로 크게']},
+ bridge:{t:'글루트 브릿지',j:BRG,hl:'glute',a:['!M108 114 L108 86'],c:'누워서 무릎 세우고 엉덩이 힘으로 들어올렸다 천천히 내리기. 위에서 2초.',h:['허리 꺾지 말고 엉덩이 조이기','허벅지 뒤보다 엉덩이에 힘']},
+ bwsquat:{t:'맨몸 스쿼트',j:[[124,40],[120,54],[104,80],[140,60],[160,58],[142,62],[162,60],[146,80],[144,104],[148,82],[146,104]],hl:'quad glute',a:['!M88 50 L88 84'],c:'팔을 앞으로 뻗고 편한 깊이까지 천천히 스쿼트.',h:['무릎은 발끝 방향','몸 데우는 속도로']},
+ wraise:{t:'스탠딩 W 스퀴즈',j:J(std,[[110,52],[116,36],[114,52],[120,36]]).concat(stdL),hl:'back shoulder',c:'팔을 W 모양으로 들고 날개뼈를 뒤로 모아 2초 조였다 풀기. 굽은 등 리셋.',h:['어깨 으쓱하지 않기','가슴 열기']},
+ breath:{t:'90/90 호흡',j:J(sup,[[62,82],[86,86],[60,84],[84,88],[114,58],[156,58],[116,60],[158,60]]),x:[['chair',148,60,52]],hl:'core',c:'의자에 종아리 올리고 누워 4초 들이쉬고 6초 내쉬기. 배 360도로.',h:['내쉴 때 갈비뼈 내리기','어깨 힘 빼기']},
+ hipflex:{t:'하프 닐링 고관절 스트레치',sw:1,j:[[112,28],[112,42],[116,72],[106,56],[114,68],[118,56],[120,68],[148,74],[148,104],[102,101],[72,103]],hl:'glute',a:['M100 62 L128 62'],c:'한쪽 무릎 꿇고 뒷다리 쪽 엉덩이를 조이며 골반을 살짝 앞으로. 30초씩 좌우. 오래 앉아서 짧아진 고관절 풀기.',h:['허리 꺾지 말고 엉덩이 조이기','앞으로 숙이지 않기']},
+ thread:{t:'스레드 더 니들',sw:1,j:[[48,82],[60,76],[132,56],[90,92],[118,96],[58,88],[56,100],[134,100],[170,100],[136,100],[172,100]],hl:'back',a:['M124 86 Q100 104 80 92'],c:'네발에서 한 팔을 반대쪽 아래로 넣어 등 돌리기. 30초씩 좌우.',h:['어깨를 바닥 쪽으로 천천히','숨 내쉬며 더 돌리기']},
+ /* core & BJJ */
+ deadbug:{t:'데드버그',j:J(sup,[[44,70],[46,46],[38,70],[36,46],[112,56],[152,56],[156,92],[200,94]]),hl:'core',a:['M196 84 Q176 70 160 64'],c:'허리를 바닥에 붙이고 반대쪽 팔·다리를 천천히 뻗었다 돌아오기. 번갈아.',h:['숨 내쉬며 뻗기','허리가 뜨면 범위 줄이기'],hs:'왼쪽 다리는 무릎 살짝 굽혀서 뻗어도 돼.'},
+ hollow:{t:'할로우 홀드 (턱)',j:[[66,72],[80,80],[126,98],[102,74],[124,70],[100,76],[122,72],[146,64],[180,70],[148,66],[182,72]],hl:'core',c:'허리를 바닥에 누르고 어깨와 굽힌 무릎을 들어 버티기.',h:['턱 살짝 당기기','쉬우면 팔을 머리 위로']},
+ bear:{t:'베어 플랭크',j:[[34,44],[50,52],[132,54],[52,76],[54,100],[56,76],[58,100],[136,88],[174,100],[138,88],[176,100]],hl:'core',c:'네발 자세에서 무릎을 2–3cm만 띄우고 버티기.',h:['등은 테이블처럼 평평하게','숨 멈추지 않기']},
+ side:{t:'사이드 플랭크',sw:1,j:[[44,40],[58,52],[130,74],[58,98],[84,98],[88,60],[118,68],[176,88],[222,100],[178,86],[224,96]],hl:'core',c:'20초 한쪽 → 신호음 → 20초 반대쪽. 골반 높게.',h:['어깨-골반-발목 일직선','무릎 대는 버전도 OK']},
+ kneeside:{t:'무릎 사이드 플랭크',sw:1,j:[[52,44],[66,56],[132,78],[66,98],[92,98],[94,64],[122,72],[166,100],[198,92],[168,98],[200,88]],hl:'core',c:'무릎 대고 사이드 플랭크. 20초씩 좌우.',h:['골반 앞으로 밀기','어깨 아래 팔꿈치']},
+ birddog:{t:'버드독',j:[[38,44],[54,54],[132,56],[32,56],[10,58],[56,78],[58,100],[176,54],[222,52],[134,100],[170,100]],hl:'core back',c:'네발 자세에서 반대 팔·다리 뻗고 2초 멈춤. 번갈아.',h:['골반이 돌아가지 않게','허리 꺾지 말고 길게'],hs:'왼쪽 다리를 뻗을 때 당기면 높이를 낮게.'},
+ shrimp:{t:'새우빼기 (힙 이스케이프)',j:[[28,84],[46,90],[116,94],[66,76],[84,64],[62,78],[80,68],[146,62],[160,100],[150,92],[192,98]],hl:'core glute',a:['M108 114 L74 114'],c:'옆으로 누워 손으로 프레임, 발로 밀며 엉덩이를 뒤로 빼기. 좌우 교대.',h:['어깨와 발로 밀고 엉덩이 멀리','작게 여러 번'],hs:'왼발로 밀 때 허벅지 뒤 당기면 범위를 작게.'},
+ trot:{t:'T 로테이션',j:[[44,36],[58,48],[132,72],[58,74],[58,100],[60,26],[62,6],[178,88],[222,100],[180,86],[224,96]],hl:'core shoulder',a:['M80 8 Q96 4 98 22'],c:'하이 플랭크에서 몸을 옆으로 돌려 한 팔을 천장으로. 좌우 교대.',h:['골반과 어깨가 같이 돌기','돌아올 때 천천히']},
+ bearcrawl:{t:'베어 크롤 (앞뒤)',j:[[34,44],[50,52],[132,54],[52,76],[54,100],[56,76],[58,100],[136,88],[174,100],[138,88],[176,100]],hl:'core shoulder',a:['!M40 22 L96 22'],c:'무릎 띄운 네발로 앞으로 3–4걸음, 뒤로 3–4걸음.',h:['반대 손발 같이','엉덩이 높이 유지']},
+ hip9090:{t:'90/90 힙 스위치',j:[[68,32],[72,46],[96,92],[66,72],[60,100],[76,72],[72,100],[134,96],[160,100],[70,100],[50,98]],hl:'glute',a:['!M130 74 Q150 52 172 72'],c:'앉아서 양 무릎 90°로 한쪽에 눕혔다가 반대쪽으로 넘기기. 가드 리텐션 고관절.',h:['손 뒤로 짚어도 OK','천천히 끝 범위까지']},
+ squeeze:{t:'내전근 스퀴즈',j:J(sup,[[66,100],[92,100],[64,100],[90,100],[136,62],[156,100],[138,64],[158,100]]),x:[['pillow',137,62]],hl:'add',c:'누워 무릎 사이에 쿠션 끼우고 5초 세게 조이고 2초 풀기 반복. 클로즈드 가드 힘.',h:['숨 참지 않기','엉덩이는 바닥에']},
+ /* posterior chain (phase-gated) */
+ rdl:{t:'DB 루마니안 데드리프트',ph:3,alt:'hipthrust',j:[[80,38],[94,44],[140,58],[96,64],[98,82],[98,64],[100,82],[130,82],[134,103],[134,82],[138,103]],x:[['db',99,88]],hl:'glute back ham',a:['M68 74 Q62 48 78 26'],c:'무릎 살짝 굽히고 엉덩이를 뒤로 밀며 덤벨을 정강이까지 내렸다 엉덩이로 일어서기. 앉아 일하는 자세의 반대 동작.',h:['허리 중립, 등 평평하게','덤벨은 다리에 붙여서']},
+ hipthrust:{t:'DB 힙 쓰러스트',ph:2,alt:'bridge',j:[[42,54],[56,60],[118,62],[100,58],[118,56],[102,60],[120,58],[158,58],[164,102],[160,60],[166,102]],x:[['chair',14,64,48],['db',118,54]],hl:'glute',a:['!M118 98 L118 76'],c:'의자나 소파에 등 기대고 덤벨을 골반 위에 올려 엉덩이를 들어올리기. 위에서 2초.',h:['턱 당기고 갈비뼈 내리기','정강이가 수직일 때 위에서 멈추기']},
+ slrdl:{t:'한 다리 DB RDL',ph:3,alt:'slbridge',sw:1,j:[[80,54],[94,58],[140,64],[96,74],[98,90],[92,72],[86,86],[132,84],[134,103],[186,58],[224,52]],x:[['db',98,96]],hl:'glute ham',c:'한 다리로 서서 반대 다리를 뒤로 뻗으며 몸을 숙였다 엉덩이로 일어서기. 20초씩 좌우.',h:['골반 수평 유지','벽 옆에서 균형 잡기']},
+ slbridge:{t:'한 다리 브릿지',ph:2,alt:'clam',sw:1,j:J(BRG.slice(0,9),[[150,58],[194,46]]),hl:'glute',a:['!M108 114 L108 86'],c:'한쪽 다리는 펴서 들고 반대 다리로만 엉덩이 들어올리기. 20초씩 좌우.',h:['골반이 한쪽으로 처지지 않게','위에서 1초 멈춤']},
+ clam:{t:'클램쉘',sw:1,j:[[26,84],[44,92],[110,94],[60,76],[70,92],[30,98],[16,96],[148,78],[172,96],[150,90],[174,98]],hl:'glute',a:['M150 70 L150 48'],c:'옆으로 누워 무릎 굽히고 발은 붙인 채 위쪽 무릎 열기. 20초씩 좌우.',h:['골반이 뒤로 넘어가지 않게','천천히']},
+ proney:{t:'엎드려 Y 레이즈',j:[[64,92],[80,96],[150,98],[54,84],[30,78],[56,86],[32,80],[192,100],[232,100],[194,100],[234,100]],hl:'back shoulder',a:['!M22 92 L22 66'],c:'엎드려 팔을 Y자로 머리 위로 뻗고 엄지를 위로 해서 2초 들었다 내리기. 굽은 등 펴는 힘.',h:['목은 길게, 이마는 바닥 근처','허리로 들지 말고 등 위쪽으로']},
+ angel:{t:'리버스 스노우엔젤',j:[[26,90],[44,96],[114,98],[72,90],[100,92],[70,92],[98,94],[160,100],[206,100],[162,100],[208,100]],hl:'back shoulder',a:['M96 80 Q60 62 22 74'],c:'엎드려 팔을 살짝 들고 엉덩이 옆에서 머리 위까지 크게 쓸기.',h:['엄지 위로','목은 길게, 턱 당기기']},
+ /* upper */
+ dbrow:{t:'의자 짚고 DB 한 팔 로우',sw:1,j:[[58,38],[72,46],[138,58],[98,44],[96,68],[74,70],[76,82],[150,82],[152,104],[126,82],[112,104]],x:[['chair',50,82,44],['db',96,72]],hl:'back arm',c:'한 손은 의자, 반대 손으로 덤벨을 옆구리로 당기기. 20초씩 좌우.',h:['팔꿈치를 뒤로, 날개뼈 모으기','등 평평하게'],hs:'다리를 앞뒤로 벌리고 무릎 굽혀서 햄스트링 부담 줄이기.'},
+ tablerow:{t:'테이블 인버티드 로우',j:[[74,54],[90,60],[148,84],[94,44],[98,28],[92,44],[96,28],[180,66],[196,102],[182,68],[198,102]],x:[['table']],hl:'back arm',a:['!M70 30 L70 56'],c:'튼튼한 테이블 밑에서 모서리를 잡고 가슴을 끌어올리기.',h:['무릎 굽히고 발바닥 바닥에','테이블 흔들리면 하지 말기']},
+ towel:{t:'수건 그립 DB 홀드',j:J(std,[[124,58],[134,70],[126,58],[136,70]]).concat(stdL),x:[['towel',134,70,138,84],['db',138,90]],hl:'arm',c:'수건을 덤벨 손잡이에 감고 양 끝을 쥐고 버티기. 도복 그립 연습.',h:['손목 곧게','들 때는 무릎 굽혀서']},
+ suitcase:{t:'DB 수트케이스 홀드',sw:1,j:J(std,[[122,58],[122,72],[118,58],[118,70]]).concat(stdL),x:[['db',122,78]],hl:'core arm',c:'한 손에 덤벨 들고 똑바로 서서 버티기. 20초씩 좌우.',h:['몸이 기울지 않게','어깨 으쓱하지 않기']},
+ pushup:{t:'푸시업',j:hiPl,hl:'arm shoulder',a:['!M26 60 L26 90'],c:'가슴이 바닥 가까이 갈 때까지 내렸다 밀기.',h:['팔꿈치 45도','힘들면 무릎 대고']},
+ floorpress:{t:'DB 플로어 프레스 (두 손)',j:J(sup,[[46,70],[48,48],[42,70],[46,48],[136,62],[156,100],[138,64],[158,100]]),x:[['db',47,40]],hl:'arm shoulder',a:['!M66 44 L66 82'],c:'누워서 덤벨을 두 손으로 잡고 팔꿈치가 바닥에 닿을 때까지 내렸다 밀기.',h:['손목 곧게','내릴 때 2초']},
+ ohpress:{t:'DB 오버헤드 프레스 (두 손)',j:J(std,[[112,30],[118,12],[128,30],[122,12]]).concat(stdL),x:[['db',120,8]],hl:'shoulder arm',a:['!M100 14 L100 42'],c:'덤벨 양끝을 두 손으로 잡고 가슴에서 머리 위로 밀어올리기.',h:['갈비뼈 내리기','허리 꺾지 않기']},
+ chop:{t:'하프 닐링 DB 찹',sw:1,j:[[110,30],[110,44],[110,72],[124,34],[136,22],[122,36],[134,24],[140,74],[140,104],[100,102],[70,104]],x:[['db',140,18,1]],hl:'core shoulder',a:['M152 22 Q156 66 100 90'],c:'한쪽 무릎 꿇고 덤벨을 어깨 위에서 반대쪽 엉덩이 옆까지 대각선으로 내리기. 20초씩 좌우.',h:['골반은 정면 고정','천천히 컨트롤'],hs:'무릎 꿇은 자세라 햄스트링 부담이 적어.'},
+ /* lower */
+ gobletsq:{t:'DB 고블릿 스쿼트 (3초 내리기)',j:DSQ,x:[['db',142,64,1]],hl:'quad glute',a:['!M88 50 L88 84'],c:'덤벨을 세워 가슴에 붙이고 3초 동안 내려가서 힘차게 일어서기.',h:['무릎은 발끝 방향','일어설 때 엉덩이 조이기'],hs:'깊이는 허벅지 뒤 당김 전까지만.'},
+ pulse:{t:'스쿼트 펄스',j:DSQ,x:[['db',142,64,1]],hl:'quad',a:['!M88 68 L88 86'],c:'스쿼트 아래쪽에서 10cm만 오르내리기를 쉬지 않고 반복.',h:['완전히 일어서지 않기','힘들면 덤벨 없이']},
+ frontsq:{t:'DB 1.5렙 고블릿 스쿼트',j:DSQ,x:[['db',142,64,1]],hl:'quad glute',a:['!M88 50 L88 84'],c:'끝까지 앉고 → 반만 일어났다 → 다시 앉고 → 끝까지 일어서기가 1회.',h:['천천히 컨트롤','무릎은 발끝 방향'],hs:'깊이는 허벅지 뒤 당김 전까지만.'},
+ wallsit:{t:'DB 월 싯',j:[[72,32],[72,46],[74,76],[86,62],[100,70],[88,62],[102,70],[114,76],[114,104],[116,78],[116,104]],x:[['wall',60],['db',100,66]],hl:'quad',c:'벽에 등 대고 앉은 자세. 덤벨을 허벅지 위에 올려 버티기.',h:['무릎 90° 목표','허리 벽에 붙이기']},
+ stepup:{t:'의자 스텝업',sw:1,j:[[106,16],[106,30],[108,60],[100,44],[104,58],[112,44],[114,58],[136,54],[140,70],[106,82],[104,104]],x:[['chair',118,72,58]],hl:'quad glute',a:['!M86 26 L86 56'],c:'튼튼한 의자나 계단에 한 발 올리고 그 다리 힘으로만 올라서기. 20초씩 좌우.',h:['뒷발로 튀어오르지 않기','내려올 때 천천히']},
+ singlebox:{t:'의자 한 발 스쿼트',sw:1,j:[[130,34],[122,48],[110,72],[140,56],[160,54],[138,58],[158,56],[146,74],[144,104],[142,64],[162,80]],x:[['chair',68,70,46]],hl:'quad glute',a:['M98 74 L98 48'],c:'의자에 앉았다가 한 발로만 일어서기. 20초씩 좌우.',h:['팔을 앞으로 뻗어 균형','어려우면 높은 의자'],hs:'왼다리로 설 때 허벅지 뒤 당기면 높은 의자로.'},
+ stepdown:{t:'스텝다운 (천천히 내려가기)',sw:1,j:[[128,14],[126,28],[124,54],[140,38],[156,40],[142,40],[158,42],[144,70],[128,88],[150,76],[170,100]],x:[['block',88,88,72]],hl:'quad',a:['!M184 72 L184 98'],c:'계단 위 한 발로 서서 반대 발 뒤꿈치를 3초 동안 바닥까지 내렸다 올라오기. 20초씩 좌우.',h:['무릎이 안으로 모이지 않게','난간이나 벽 잡아도 OK']},
+ sidewalk:{t:'스쿼트 사이드 워크',j:[[120,36],[118,50],[106,74],[132,62],[146,58],[134,64],[148,60],[140,78],[138,104],[142,80],[140,104]],hl:'glute quad',a:['!M60 114 L176 114'],c:'반쯤 앉은 낮은 자세로 옆으로 3걸음, 반대로 3걸음. 일어서지 않기.',h:['주짓수 베이스 자세','발끼리 붙이지 않기']},
+ speed:{t:'스피드 스쿼트 (점프 없이)',j:[[120,36],[118,50],[106,74],[132,62],[146,58],[134,64],[148,60],[140,78],[138,104],[142,80],[140,104]],hl:'quad glute',a:['!M88 46 L88 80'],c:'맨몸으로 40초 동안 최대한 빠르게 스쿼트. 마지막 피니셔.',h:['자세 무너지면 속도 줄이기','발바닥 전체로 밀기']},
+ copen:{t:'코펜하겐 플랭크 (짧은 버전)',sw:1,j:[[44,40],[58,52],[130,70],[58,98],[84,98],[88,58],[118,66],[172,62],[200,64],[160,92],[182,100]],x:[['chair',158,66,56]],hl:'add core',c:'위쪽 무릎을 의자에 올리고 사이드 플랭크. 클로즈드 가드 조이는 힘. 20초씩 좌우.',h:['무릎을 의자에 (발 아님)','어려우면 10초씩']},
+ hydrant:{t:'파이어 하이드런트',sw:1,j:[[38,52],[54,58],[132,58],[56,80],[58,100],[60,80],[62,100],[152,72],[174,90],[134,100],[170,100]],hl:'glute',a:['M158 62 L170 44'],c:'네발에서 무릎 굽힌 채 다리를 옆으로 들기. 20초씩 좌우.',h:['골반 수평 유지','천천히 내리기']}
+};
+
+/* ---------- program ---------- */
+const WARM=['catcow','bridge','bwsquat','wraise'];
+const COOL=['breath','hipflex','thread'];
+const S={
+ A:{n:'월 · 후면사슬 & 당기기',f:'등·엉덩이·그립 + 다리 · 앉아서 굽은 자세 리셋',r:3,m:['dbrow','rdl','gobletsq','tablerow','proney','deadbug','towel']},
+ B:{n:'화 · 하체 번 & 코어',f:'허벅지·엉덩이를 태우는 날 + 옆구리',r:3,m:['gobletsq','stepup','pulse','copen','wallsit','side','hollow']},
+ C:{n:'수 · 주짓수 프렙',f:'수업 전 몸 깨우기 · 힙 이스케이프·프레임',r:2,m:['shrimp','trot','bearcrawl','deadbug','kneeside','sidewalk','bridge']},
+ D:{n:'목 · 프레임 & 후면',f:'미는 힘·프레임 + 후면사슬 + 다리 피니셔',r:3,m:['pushup','floorpress','rdl','chop','angel','ohpress','speed']},
+ E:{n:'금 · 엉덩이·후면 다리 & 코어',f:'한 다리 힘·엉덩이·후면사슬 + 버티기',r:3,m:['frontsq','slrdl','singlebox','stepdown','hipthrust','hydrant','suitcase']},
+ F:{n:'토 · 주짓수 프렙 2',f:'수업 전 몸 깨우기 · 고관절·가드 힘',r:2,m:['shrimp','hip9090','birddog','kneeside','bearcrawl','squeeze','deadbug']},
+ G:{n:'일 · 회복 & 자세 리셋',f:'호흡·가동성·등 펴기 · 가볍게',r:2,m:['breath','catcow','thread','hipflex','proney','bridge','hip9090']}
+};
+const WEEK=[{d:1,s:'A',n:'월'},{d:2,s:'B',n:'화'},{d:3,s:'C',n:'수',bjj:1},{d:4,s:'D',n:'목'},{d:5,s:'E',n:'금'},{d:6,s:'F',n:'토',bjj:1},{d:0,s:'G',n:'일'}];
+const WORK=40,REST=20,RREST=60,WARMD=45,TR=15,COOLD=60;
+
+/* ---------- state & storage ---------- */
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const dk=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const LS='jj-v2';
+let ST={set:{phase:1,rounds:{},warm:true,cool:true,sound:true,voice:false},log:{}};
+try{const raw=JSON.parse(localStorage.getItem(LS)||'null');if(raw&&raw.log)ST={set:Object.assign(ST.set,raw.set||{}),log:raw.log}}catch(e){}
+try{const old=JSON.parse(localStorage.getItem('jj-log')||'{}');Object.keys(old).forEach(k=>{const p=k.split('-');const nk=p[0]+'-'+pad(p[1])+'-'+pad(p[2]);if(!ST.log[nk]&&Object.values(old[k]).some(Boolean))ST.log[nk]={legacy:{r:0,at:0}}})}catch(e){}
+const persist=()=>{
+ try{localStorage.setItem(LS,JSON.stringify(ST));$('sync').textContent='기록: 이 기기에 저장됨'}
+ catch(e){$('sync').textContent='기록: 저장 실패 (저장 공간 확인) · 내보내기로 백업해 둬'}
+};
+const mergeLog=(a,b)=>{const o=JSON.parse(JSON.stringify(a||{}));Object.keys(b||{}).forEach(d=>{o[d]=Object.assign({},b[d],o[d]||{})});return o};
+
+/* ---------- view state ---------- */
+const today=new Date(),tdow=today.getDay();
+const dateFor=dow=>{const d=new Date(today);d.setDate(today.getDate()+((dow+6)%7)-((tdow+6)%7));return d};
+let day=WEEK.find(w=>w.d===tdow),sk=day.s;
+const rounds=()=>ST.set.rounds[sk]||S[sk].r;
+const res=k=>{let e=M[k];const o=e;while(e.ph&&e.ph>ST.set.phase)e=M[e.alt];return{e,o,sub:e!==o}};
+
+let seq=[],idx=0,remain=0,running=false,tick=null,last=0,ac=null,pendingEntry=null,rpeVal=0;
+const tts='speechSynthesis' in window&&typeof SpeechSynthesisUtterance!=='undefined'?window.speechSynthesis:null;
+const build=()=>{
+ seq=[];const L=S[sk].m.map(k=>res(k).e),R=rounds();
+ if(ST.set.warm)WARM.forEach((k,i)=>{seq.push({k:'warm',e:M[k],i,d:WARMD});seq.push({k:'tr',d:TR})});
+ for(let r=0;r<R;r++)for(let i=0;i<L.length;i++){
+  seq.push({k:'work',e:L[i],r,i,d:WORK});
+  if(i<L.length-1)seq.push({k:'rest',r,i,d:REST});else if(r<R-1)seq.push({k:'rround',r,d:RREST});
+ }
+ if(ST.set.cool){seq.push({k:'tr',d:TR});COOL.forEach((k,i)=>seq.push({k:'cool',e:M[k],i,d:COOLD}))}
+ idx=0;remain=seq[0].d;
+};
+const total=()=>seq.reduce((a,s)=>a+s.d,0);
+const fmt=s=>Math.floor(s/60)+':'+pad(Math.floor(s%60));
+const beep=(f,ms)=>{if(!ST.set.sound)return;try{if(!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(.25,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+ms/1000);o.start();o.stop(ac.currentTime+ms/1000)}catch(e){}};
+const say=t=>{if(!tts||!ST.set.voice)return;try{tts.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='ko-KR';const v=tts.getVoices().find(x=>/^ko/i.test(x.lang));if(v)u.voice=v;tts.speak(u)}catch(e){}};
+const COL={work:'var(--work)',rest:'var(--rest)',rround:'var(--round)',warm:'var(--warm)',tr:'var(--warm)',cool:'var(--cool)'};
+const LAB={work:'운동',rest:'휴식',rround:'라운드 휴식',warm:'워밍업',tr:'전환',cool:'쿨다운'};
+
+/* ---------- render ---------- */
+const renderKpis=()=>{
+ const days=Object.keys(ST.log).filter(k=>Object.keys(ST.log[k]).length);
+ let st=0;const c=new Date(today);if(!ST.log[dk(c)])c.setDate(c.getDate()-1);
+ while(ST.log[dk(c)]&&Object.keys(ST.log[dk(c)]).length){st++;c.setDate(c.getDate()-1)}
+ const wk=WEEK.filter(w=>{const k=dk(dateFor(w.d));return ST.log[k]&&Object.keys(ST.log[k]).length}).length;
+ const ym=dk(today).slice(0,7);
+ const tot=days.reduce((a,k)=>a+Object.keys(ST.log[k]).length,0);
+ const mo=days.filter(k=>k.startsWith(ym)).reduce((a,k)=>a+Object.keys(ST.log[k]).length,0);
+ $('kStreak').textContent=st+'일';$('kWeek').textContent=wk+'/7';$('kMonth').textContent=mo+'회';$('kTotal').textContent=tot+'회';
+};
+const renderWeek=()=>{
+ $('week').innerHTML=WEEK.map(w=>{const done=ST.log[dk(dateFor(w.d))]||{};const ok=Object.keys(done).length>0;
+  return `<button type="button" class="wd${w.d===tdow?' today':''}" data-d="${w.d}" aria-pressed="${w===day}"><b>${w.n}</b>${w.bjj?'<span class="bjj">주짓수</span>':''}<span>${esc(S[w.s].n.split(' · ')[1])}</span>${ok?'<span class="ck">✓ 완료</span>':''}</button>`}).join('');
+};
+const estTime=()=>{const R=rounds();return (ST.set.warm?WARM.length*(WARMD+TR):0)+R*(7*WORK+6*REST)+(R-1)*RREST+(ST.set.cool?TR+COOL.length*COOLD:0)};
+const recoFor=()=>{
+ const hist=Object.keys(ST.log).sort().reverse().map(d=>ST.log[d][sk]).filter(x=>x&&x.rpe);
+ if(!hist.length)return '첫 기록 후 체감 강도에 맞춰 추천이 바뀌어.';
+ const a=hist[0].rpe,b=hist[1]&&hist[1].rpe;
+ if(a>=9)return `지난번 체감 ${a} → 오늘은 라운드 −1 또는 휴식 늘리기 추천.`;
+ if(b&&a<=6&&b<=6)return `최근 두 번 체감 ${b}, ${a} → 라운드 +1 또는 내려가는 시간 5초로 올릴 때야.`;
+ return `지난번 체감 ${a} → 지금 강도 유지 추천.`;
+};
+const renderBar=()=>{
+ const s=S[sk],dd=dateFor(day.d),done=ST.log[dk(dd)]&&ST.log[dk(dd)][sk];
+ $('sName').textContent=s.n;$('sFocus').textContent=s.f+` · 예상 ${Math.round(estTime()/60)}분`;
+ $('rOut').textContent=rounds()+'라운드';
+ $('optWarm').checked=ST.set.warm;$('optCool').checked=ST.set.cool;
+ $('manual').textContent=done?`${dd.getMonth()+1}/${dd.getDate()} 완료 취소`:`${dd.getMonth()+1}/${dd.getDate()} 타이머 없이 완료 체크`;
+ $('reco').textContent=recoFor();
+};
+const smallCard=(k,sec)=>{const e=M[k];return `<div class="sm"><div class="pic">${fig(e)}</div><div><b>${esc(e.t)}</b><span>${sec}${e.sw?' · 좌우 반씩':''} · ${esc(e.c)}</span></div></div>`};
+const renderCards=()=>{
+ $('cardsTitle').textContent=S[sk].n;
+ $('warmH').hidden=!ST.set.warm;$('warmList').hidden=!ST.set.warm;$('coolH').hidden=!ST.set.cool;$('coolList').hidden=!ST.set.cool;
+ $('warmList').innerHTML=WARM.map(k=>smallCard(k,'45초')).join('');
+ $('coolList').innerHTML=COOL.map(k=>smallCard(k,'60초')).join('');
+ $('cards').innerHTML=S[sk].m.map((k,i)=>{const {e,o,sub}=res(k);return `
+  <article class="card" id="card-${i}">
+   <h3><span class="no">${i+1}</span>${esc(e.t)}${e.sw?'<span class="tag">좌우 20초씩</span>':''}${sub?'<span class="tag sub2">재활 대체</span>':''}</h3>
+   <div class="pic">${fig(e)}</div>
+   <div><ul><li>${esc(e.c)}</li>${e.h.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>${e.hs?`<p class="hs">${esc(e.hs)}</p>`:''}${sub?`<p class="orig">원래 동작: ${esc(o.t)} (재활 ${o.ph}단계부터)</p>`:''}</div>
+  </article>`}).join('');
+};
+const show=()=>{
+ const s=seq[idx],R=rounds();
+ const nextE=seq.slice(idx+1).find(x=>x.e);
+ const cur=s.e||(nextE&&nextE.e)||M.breath;
+ $('timer').style.setProperty('--c',COL[s.k]);
+ $('phase').textContent=LAB[s.k];
+ $('count').textContent=Math.ceil(remain);
+ $('now').textContent=s.e?s.e.t:'다음: '+cur.t;
+ $('cue').textContent=s.e?s.e.c:s.k==='rround'?`${s.r+1}라운드 끝! 물 마시고 숨 고르기.`:'숨 고르고 다음 자세 준비.';
+ $('mini').innerHTML=fig(cur);
+ $('where').textContent=s.k==='warm'?`워밍업 ${s.i+1}/${WARM.length}`:s.k==='cool'?`쿨다운 ${s.i+1}/${COOL.length}`:s.k==='tr'?'전환':`라운드 ${s.r+1}/${R} · 동작 ${(s.i??0)+1}/7`;
+ const done=seq.slice(0,idx).reduce((a,x)=>a+x.d,0)+(s.d-remain);
+ $('left').textContent='남은 시간 '+fmt(Math.max(0,total()-done));
+ $('prog').style.width=(done/total()*100).toFixed(1)+'%';
+ $('arc').setAttribute('stroke-dashoffset',(565.5*(1-remain/s.d)).toFixed(1));
+ const n=seq[idx+1];
+ $('next').innerHTML=!n?'<b>마지막 구간!</b>':n.e?`다음: <b>${esc(n.e.t)}</b> ${n.d}초`:`다음: <b>${LAB[n.k]} ${n.d}초</b>${nextE?' → '+esc(nextE.e.t):''}`;
+ document.querySelectorAll('.card').forEach((c,i)=>c.classList.toggle('on',s.k==='work'&&i===s.i));
+ $('go').textContent=running?'일시정지':(idx===0&&remain===seq[0].d?'시작':'계속');
+};
+const renderCal=(()=>{let ym=[today.getFullYear(),today.getMonth()];return dir=>{
+ if(dir){ym[1]+=dir;if(ym[1]<0){ym[1]=11;ym[0]--}if(ym[1]>11){ym[1]=0;ym[0]++}}
+ const first=new Date(ym[0],ym[1],1),start=new Date(first);start.setDate(1-((first.getDay()+6)%7));
+ $('calTitle').textContent=`${ym[0]}년 ${ym[1]+1}월`;
+ let h=['월','화','수','목','금','토','일'].map(x=>`<div class="h">${x}</div>`).join('');
+ for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);const k=dk(d),n=ST.log[k]?Object.keys(ST.log[k]).length:0;
+  h+=`<div class="d${n?' x':''}${k===dk(today)?' t':''}${d.getMonth()!==ym[1]?' o':''}" title="${n?n+'회 완료':''}">${d.getDate()}</div>`}
+ $('cal').innerHTML=h;
+}})();
+const renderHist=()=>{
+ const rows=[];Object.keys(ST.log).sort().reverse().forEach(d=>Object.keys(ST.log[d]).forEach(s=>rows.push([d,s,ST.log[d][s]])));
+ $('hist').innerHTML=rows.slice(0,12).map(([d,s,e])=>`<li><span class="r">${d.slice(5).replace('-','/')}</span><span>${S[s]?esc(S[s].n):'이전 기록'}${e.note?`<span class="nt">${esc(e.note)}</span>`:''}</span><span class="r">${e.r?e.r+'R':''}${e.rpe?' · 체감 '+e.rpe:''}</span></li>`).join('')||'<li><span class="r">—</span><span>아직 기록이 없어. 오늘 첫 세션을 해봐!</span><span></span></li>';
+};
+const renderAll=()=>{renderKpis();renderWeek();renderBar();renderCards();renderCal(0);renderHist();$('phaseSel').value=String(ST.set.phase);$('optSound').checked=ST.set.sound;$('optVoice').checked=ST.set.voice};
+/* keep the screen awake while the timer runs (if supported) */
+let wake=null;
+const wakeOn=async()=>{try{if('wakeLock' in navigator&&!wake){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>{wake=null})}}catch(e){wake=null}};
+const wakeOff=()=>{try{if(wake)wake.release()}catch(e){}wake=null};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&running)wakeOn()});
+const stop=()=>{running=false;clearInterval(tick);wakeOff()};
+const load=()=>{stop();build();$('done').hidden=true;renderAll();show()};
+
+/* ---------- timer ---------- */
+const logEntry=(extra)=>{const k=dk(dateFor(day.d));ST.log[k]=ST.log[k]||{};ST.log[k][sk]=Object.assign({r:rounds(),at:Date.now()},ST.log[k][sk]||{},extra||{});persist();renderKpis();renderWeek();renderBar();renderCal(0);renderHist()};
+const finish=()=>{
+ stop();beep(660,250);setTimeout(()=>beep(880,400),280);say('오늘 운동 끝! 수고했어.');
+ $('phase').textContent='완료';$('count').textContent='끝';$('now').textContent=S[sk].n+' 완료!';$('cue').textContent='아래에서 체감 강도를 남겨줘.';
+ $('prog').style.width='100%';$('go').textContent='다시';
+ logEntry({r:rounds()});rpeVal=0;renderRpe();$('note').value='';$('done').hidden=false;
+ $('done').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});
+};
+const enter=()=>{const s=seq[idx];beep(s.k==='work'||s.k==='warm'||s.k==='cool'?880:440,350);if(s.e)say(s.e.t);else{const n=seq.slice(idx+1).find(x=>x.e);if(n)say('다음, '+n.e.t)}};
+const step=()=>{
+ const now=performance.now(),dt=(now-last)/1000;last=now;
+ const before=Math.ceil(remain);remain-=dt;const after=Math.ceil(remain);
+ const s=seq[idx];
+ if(after!==before&&after<=3&&after>0)beep(520,120);
+ if(s.e&&s.e.sw&&before>s.d/2&&after<=s.d/2){beep(760,300);say('반대쪽')}
+ if(remain<=0){if(idx>=seq.length-1){finish();return}idx++;remain=seq[idx].d;enter()}
+ show();
+};
+$('go').addEventListener('click',()=>{
+ if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){ac=null}}
+ if(ac&&ac.state==='suspended')ac.resume();
+ if($('go').textContent==='다시'){idx=0;remain=seq[0].d;$('done').hidden=true}
+ running=!running;
+ if(running){last=performance.now();tick=setInterval(step,200);wakeOn();beep(880,200);if(idx===0&&remain===seq[0].d&&seq[0].e)say(seq[0].e.t)}else{clearInterval(tick);wakeOff()}
+ show();
+});
+const jump=d=>{idx=Math.min(seq.length-1,Math.max(0,idx+d));remain=seq[idx].d;show()};
+$('skip').addEventListener('click',()=>jump(1));
+$('prev').addEventListener('click',()=>jump(-1));
+$('restart').addEventListener('click',()=>{stop();idx=0;remain=seq[0].d;$('done').hidden=true;show()});
+
+/* ---------- completion ---------- */
+const renderRpe=()=>{$('rpe').innerHTML=Array.from({length:10},(_,i)=>`<button type="button" data-v="${i+1}" aria-pressed="${rpeVal===i+1}">${i+1}</button>`).join('')};
+$('rpe').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;rpeVal=+b.dataset.v;renderRpe()});
+$('saveDone').addEventListener('click',()=>{logEntry({rpe:rpeVal||undefined,note:$('note').value.trim()||undefined});$('doneTitle').textContent='저장 완료! 내일 또 보자';setTimeout(()=>{$('done').hidden=true;$('doneTitle').textContent='완료! 기록에 체크됐어'},1600)});
+
+/* ---------- controls ---------- */
+$('week').addEventListener('click',e=>{const b=e.target.closest('.wd');if(!b)return;day=WEEK.find(w=>w.d==b.dataset.d);sk=day.s;load()});
+$('rMinus').addEventListener('click',()=>{ST.set.rounds[sk]=Math.max(1,rounds()-1);persist();load()});
+$('rPlus').addEventListener('click',()=>{ST.set.rounds[sk]=Math.min(6,rounds()+1);persist();load()});
+$('optWarm').addEventListener('change',e=>{ST.set.warm=e.target.checked;persist();load()});
+$('optCool').addEventListener('change',e=>{ST.set.cool=e.target.checked;persist();load()});
+$('optSound').addEventListener('change',e=>{ST.set.sound=e.target.checked;persist()});
+$('optVoice').addEventListener('change',e=>{ST.set.voice=e.target.checked;persist()});
+$('phaseSel').addEventListener('change',e=>{ST.set.phase=+e.target.value;persist();load()});
+$('manual').addEventListener('click',()=>{const k=dk(dateFor(day.d));if(ST.log[k]&&ST.log[k][sk]){delete ST.log[k][sk];if(!Object.keys(ST.log[k]).length)delete ST.log[k];persist();renderAll()}else logEntry({manual:true})});
+$('calPrev').addEventListener('click',()=>renderCal(-1));
+$('calNext').addEventListener('click',()=>renderCal(1));
+
+load();
+
+/* ---------- voice (browser built-in speech) ---------- */
+if(tts){$('voiceWrap').hidden=false;try{tts.getVoices();tts.addEventListener&&tts.addEventListener('voiceschanged',()=>tts.getVoices())}catch(e){}}
+
+/* ---------- backup: export / import JSON ---------- */
+$('exportBtn').addEventListener('click',()=>{
+ const payload={app:'jj-trainer',v:2,exported:new Date().toISOString(),data:ST};
+ const blob=new Blob([JSON.stringify(payload,null,1)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='jj-backup-'+dk(new Date())+'.json';
+ document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+ $('sync').textContent='기록: 내보내기 완료 ('+Object.keys(ST.log).length+'일치)';
+});
+$('importBtn').addEventListener('click',()=>{$('importFile').value='';$('importFile').click()});
+$('importFile').addEventListener('change',async e=>{
+ const f=e.target.files&&e.target.files[0];if(!f)return;
+ try{
+  const raw=JSON.parse(await f.text());
+  const d=raw&&raw.data?raw.data:raw;
+  if(!d||typeof d.log!=='object'||Array.isArray(d.log))throw new Error('형식');
+  const n=Object.keys(d.log).length;
+  if(!confirm(`${n}일치 기록을 가져와서 지금 기록과 합칠까?\n(같은 날·같은 루틴은 이 기기 기록이 우선)`))return;
+  if(running)stop();
+  ST.log=mergeLog(ST.log,d.log);
+  if(d.set&&typeof d.set==='object')ST.set=Object.assign({},ST.set,d.set,{rounds:Object.assign({},d.set.rounds||{},ST.set.rounds||{})});
+  persist();load();
+  $('sync').textContent='기록: 가져오기 완료 ('+n+'일치 합침) · 이 기기에 저장됨';
+ }catch(err){alert('가져오기 실패: 이 앱에서 내보낸 JSON 파일인지 확인해줘.')}
+});
+
+/* ---------- offline (service worker) ---------- */
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+if('serviceWorker' in navigator&&location.protocol!=='file:'){
+ window.addEventListener('load',()=>{
+  navigator.serviceWorker.register('./sw.js').then(reg=>{
+   const offer=w=>{$('updateMsg').hidden=false;$('updateBtn').onclick=()=>{if(running){alert('타이머가 끝난 뒤에 업데이트해줘.');return}window.__jjUpdate=true;w.postMessage('skipWaiting')}};
+   if(reg.waiting&&navigator.serviceWorker.controller)offer(reg.waiting);
+   reg.addEventListener('updatefound',()=>{const w=reg.installing;if(!w)return;w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)offer(w)})});
+  }).catch(()=>{});
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!window.__jjUpdate)return;window.__jjUpdate=false;location.reload()});
+ });
+}
+}
+</script>
+</body>
+</html>
