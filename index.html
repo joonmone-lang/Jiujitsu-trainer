@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
 <title>주짓수 홈 트레이닝</title>
 <meta name="theme-color" content="#d6332b">
 <meta name="mobile-web-app-capable" content="yes">
@@ -114,6 +114,16 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .cal .d.x{background:var(--work);color:#fff;font-weight:700}
 .cal .d.t{box-shadow:0 0 0 2px var(--ink) inset}
 .cal .d.o{opacity:.3}
+.cal button.d{font:inherit;font-size:14px;border:0;background:transparent;color:inherit;cursor:pointer;width:100%;-webkit-tap-highlight-color:transparent}
+.cal .d.x{background:var(--work);color:#fff}
+.cal button.d:disabled{cursor:default;color:var(--mute)}
+.cal .d small{font-size:11px;line-height:1}
+.rec{border:0;border-radius:20px;padding:20px;width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 24px);overflow:auto;background:var(--bg);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.rec::backdrop{background:rgba(0,0,0,.45)}
+.rec .sub{margin:14px 0 6px}
+.recmsg{margin:4px 0 0;color:var(--rest);font-weight:700}
+textarea.note{display:block;resize:vertical;min-height:84px;line-height:1.5}
+.recbtn{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .calh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .calh button{font:inherit;width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
 .hist{list-style:none;margin:0;padding:0}
@@ -182,17 +192,25 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
    </div>
   </div>
 
-  <div class="done" id="done" hidden>
-   <h3 id="doneTitle">완료! 기록에 체크됐어</h3>
-   <div>오늘 체감 강도는? (RPE)</div>
-   <div class="rpe" id="rpe"></div>
-   <div class="rpel"><span>1–4 쉬움</span><span>5–6 적당</span><span>7–8 힘듦</span><span>9–10 한계</span></div>
-   <label for="note" class="sub" style="display:block;margin-top:12px">메모 (선택)</label>
-   <input class="note" id="note" maxlength="140" placeholder="예: 프레스는 두 손으로, 왼쪽 허벅지 괜찮음">
-   <button type="button" class="save" id="saveDone">기록 저장</button>
-  </div>
  </div>
 </section>
+
+<dialog class="rec" id="rec" aria-labelledby="recTitle">
+ <h3 id="recTitle"></h3>
+ <p class="recmsg" id="recMsg" hidden></p>
+ <label for="recRoutine" class="sub" style="display:block">루틴</label>
+ <select class="sel" id="recRoutine"></select>
+ <div class="sub">체감 강도 (RPE · 선택)</div>
+ <div class="rpe" id="rpe"></div>
+ <div class="rpel"><span>1–4 쉬움</span><span>5–6 적당</span><span>7–8 힘듦</span><span>9–10 한계</span></div>
+ <label for="recNote" class="sub" style="display:block">메모 (선택)</label>
+ <textarea class="note" id="recNote" rows="3" inputmode="text" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="예: 프레스는 두 손으로, 왼쪽 허벅지 괜찮음"></textarea>
+ <div class="recbtn">
+  <button type="button" class="save" id="recSave">완료 체크 + 저장</button>
+  <button type="button" class="pill" id="recDel" hidden>기록 삭제</button>
+  <button type="button" class="pill" id="recClose">닫기</button>
+ </div>
+</dialog>
 
 <section class="band" style="padding-top:0">
  <div class="wrap">
@@ -465,7 +483,7 @@ const renderBar=()=>{
  $('sName').textContent=s.n;$('sFocus').textContent=s.f+` · 예상 ${Math.round(estTime()/60)}분`;
  $('rOut').textContent=rounds()+'라운드';
  $('optWarm').checked=ST.set.warm;$('optCool').checked=ST.set.cool;
- $('manual').textContent=done?`${dd.getMonth()+1}/${dd.getDate()} 완료 취소`:`${dd.getMonth()+1}/${dd.getDate()} 타이머 없이 완료 체크`;
+ $('manual').textContent=done?`${dd.getMonth()+1}/${dd.getDate()} ✓ 기록 보기·수정`:`${dd.getMonth()+1}/${dd.getDate()} 타이머 없이 완료 체크`;
  $('reco').textContent=recoFor();
 };
 const smallCard=(k,sec)=>{const e=M[k];return `<div class="sm"><div class="pic">${fig(e)}</div><div><b>${esc(e.t)}</b><span>${sec}${e.sw?' · 좌우 반씩':''} · ${esc(e.c)}</span></div></div>`};
@@ -506,8 +524,9 @@ const renderCal=(()=>{let ym=[today.getFullYear(),today.getMonth()];return dir=>
  const first=new Date(ym[0],ym[1],1),start=new Date(first);start.setDate(1-((first.getDay()+6)%7));
  $('calTitle').textContent=`${ym[0]}년 ${ym[1]+1}월`;
  let h=['월','화','수','목','금','토','일'].map(x=>`<div class="h">${x}</div>`).join('');
+ const tk=dk(today);
  for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);const k=dk(d),n=ST.log[k]?Object.keys(ST.log[k]).length:0;
-  h+=`<div class="d${n?' x':''}${k===dk(today)?' t':''}${d.getMonth()!==ym[1]?' o':''}" title="${n?n+'회 완료':''}">${d.getDate()}</div>`}
+  h+=`<button type="button" class="d${n?' x':''}${k===tk?' t':''}${d.getMonth()!==ym[1]?' o':''}" data-k="${k}"${k>tk?' disabled':''} aria-label="${d.getMonth()+1}월 ${d.getDate()}일${n?' '+n+'회 완료':''}">${d.getDate()}${n?`<small>${n>1?'✓'+n:'✓'}</small>`:''}</button>`}
  $('cal').innerHTML=h;
 }})();
 const renderHist=()=>{
@@ -521,16 +540,60 @@ const wakeOn=async()=>{try{if('wakeLock' in navigator&&!wake){wake=await navigat
 const wakeOff=()=>{try{if(wake)wake.release()}catch(e){}wake=null};
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&running)wakeOn()});
 const stop=()=>{running=false;clearInterval(tick);wakeOff()};
-const load=()=>{stop();build();$('done').hidden=true;renderAll();show()};
+const load=()=>{stop();build();renderAll();show()};
+/* every log change → stats, week board, session bar, calendar, history update at once */
+const refresh=()=>{renderKpis();renderWeek();renderBar();renderCal(0);renderHist()};
+
+/* ---------- record dialog (calendar / manual check / after timer) ---------- */
+const DOWN=['일','월','화','수','목','금','토'];
+const keyDate=k=>{const [y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)};
+let recKey=null;
+const renderRpe=()=>{$('rpe').innerHTML=Array.from({length:10},(_,i)=>`<button type="button" data-v="${i+1}" aria-pressed="${rpeVal===i+1}">${i+1}</button>`).join('')};
+const recFill=()=>{
+ const e=(ST.log[recKey]||{})[$('recRoutine').value];
+ rpeVal=e&&e.rpe||0;renderRpe();$('recNote').value=e&&e.note||'';
+ $('recDel').hidden=!e;$('recSave').textContent=e?'수정 저장':'완료 체크 + 저장';
+};
+const openRec=(k,s,msg)=>{
+ recKey=k;const d=keyDate(k),done=ST.log[k]||{};
+ $('recTitle').textContent=`${d.getMonth()+1}월 ${d.getDate()}일 (${DOWN[d.getDay()]})`;
+ $('recMsg').textContent=msg||'';$('recMsg').hidden=!msg;
+ $('recRoutine').innerHTML=Object.keys(S).map(x=>`<option value="${x}">${esc(S[x].n)}${done[x]?' ✓':''}</option>`).join('');
+ $('recRoutine').value=s||Object.keys(done).find(x=>S[x])||WEEK.find(w=>w.d===d.getDay()).s;
+ recFill();
+ const dlg=$('rec');if(!dlg.open){try{dlg.showModal()}catch(e){dlg.setAttribute('open','')}}
+};
+const closeRec=()=>{const dlg=$('rec');try{dlg.close()}catch(e){dlg.removeAttribute('open')}};
+$('recRoutine').addEventListener('change',recFill);
+$('rpe').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const v=+b.dataset.v;rpeVal=rpeVal===v?0:v;renderRpe()});
+$('recNote').addEventListener('focus',()=>setTimeout(()=>$('recNote').scrollIntoView({block:'center'}),300));
+$('recSave').addEventListener('click',()=>{
+ const s=$('recRoutine').value;ST.log[recKey]=ST.log[recKey]||{};
+ const prev=ST.log[recKey][s];
+ const e=Object.assign({r:ST.set.rounds[s]||S[s].r,at:Date.now(),manual:true},prev||{});
+ const note=$('recNote').value.trim().slice(0,140);
+ if(rpeVal)e.rpe=rpeVal;else delete e.rpe;
+ if(note)e.note=note;else delete e.note;
+ ST.log[recKey][s]=e;persist();refresh();closeRec();
+});
+$('recDel').addEventListener('click',()=>{
+ const s=$('recRoutine').value;if(!ST.log[recKey]||!ST.log[recKey][s])return;
+ if(!confirm(`${$('recTitle').textContent} ${S[s].n} 기록을 지울까?`))return;
+ delete ST.log[recKey][s];if(!Object.keys(ST.log[recKey]).length)delete ST.log[recKey];
+ persist();refresh();closeRec();
+});
+$('recClose').addEventListener('click',closeRec);
+$('rec').addEventListener('click',e=>{if(e.target===$('rec')){const r=$('rec').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeRec()}});
+$('cal').addEventListener('click',e=>{const b=e.target.closest('button.d');if(!b||b.disabled)return;openRec(b.dataset.k)});
 
 /* ---------- timer ---------- */
-const logEntry=(extra)=>{const k=dk(dateFor(day.d));ST.log[k]=ST.log[k]||{};ST.log[k][sk]=Object.assign({r:rounds(),at:Date.now()},ST.log[k][sk]||{},extra||{});persist();renderKpis();renderWeek();renderBar();renderCal(0);renderHist()};
+const logEntry=(extra)=>{const k=dk(dateFor(day.d));ST.log[k]=ST.log[k]||{};ST.log[k][sk]=Object.assign({r:rounds(),at:Date.now()},ST.log[k][sk]||{},extra||{});persist();refresh()};
 const finish=()=>{
  stop();beep(660,250);setTimeout(()=>beep(880,400),280);say('오늘 운동 끝! 수고했어.');
- $('phase').textContent='완료';$('count').textContent='끝';$('now').textContent=S[sk].n+' 완료!';$('cue').textContent='아래에서 체감 강도를 남겨줘.';
+ $('phase').textContent='완료';$('count').textContent='끝';$('now').textContent=S[sk].n+' 완료!';$('cue').textContent='기록에 체크됐어. 체감 강도와 메모를 남겨줘.';
  $('prog').style.width='100%';$('go').textContent='다시';
- logEntry({r:rounds()});rpeVal=0;renderRpe();$('note').value='';$('done').hidden=false;
- $('done').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});
+ logEntry({r:rounds()});
+ openRec(dk(dateFor(day.d)),sk,'수고했어! 기록에 체크됐어.');
 };
 const enter=()=>{const s=seq[idx];beep(s.k==='work'||s.k==='warm'||s.k==='cool'?880:440,350);if(s.e)say(s.e.t);else{const n=seq.slice(idx+1).find(x=>x.e);if(n)say('다음, '+n.e.t)}};
 const step=()=>{
@@ -545,7 +608,7 @@ const step=()=>{
 $('go').addEventListener('click',()=>{
  if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){ac=null}}
  if(ac&&ac.state==='suspended')ac.resume();
- if($('go').textContent==='다시'){idx=0;remain=seq[0].d;$('done').hidden=true}
+ if($('go').textContent==='다시'){idx=0;remain=seq[0].d}
  running=!running;
  if(running){last=performance.now();tick=setInterval(step,200);wakeOn();beep(880,200);if(idx===0&&remain===seq[0].d&&seq[0].e)say(seq[0].e.t)}else{clearInterval(tick);wakeOff()}
  show();
@@ -553,12 +616,7 @@ $('go').addEventListener('click',()=>{
 const jump=d=>{idx=Math.min(seq.length-1,Math.max(0,idx+d));remain=seq[idx].d;show()};
 $('skip').addEventListener('click',()=>jump(1));
 $('prev').addEventListener('click',()=>jump(-1));
-$('restart').addEventListener('click',()=>{stop();idx=0;remain=seq[0].d;$('done').hidden=true;show()});
-
-/* ---------- completion ---------- */
-const renderRpe=()=>{$('rpe').innerHTML=Array.from({length:10},(_,i)=>`<button type="button" data-v="${i+1}" aria-pressed="${rpeVal===i+1}">${i+1}</button>`).join('')};
-$('rpe').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;rpeVal=+b.dataset.v;renderRpe()});
-$('saveDone').addEventListener('click',()=>{logEntry({rpe:rpeVal||undefined,note:$('note').value.trim()||undefined});$('doneTitle').textContent='저장 완료! 내일 또 보자';setTimeout(()=>{$('done').hidden=true;$('doneTitle').textContent='완료! 기록에 체크됐어'},1600)});
+$('restart').addEventListener('click',()=>{stop();idx=0;remain=seq[0].d;show()});
 
 /* ---------- controls ---------- */
 $('week').addEventListener('click',e=>{const b=e.target.closest('.wd');if(!b)return;day=WEEK.find(w=>w.d==b.dataset.d);sk=day.s;load()});
@@ -569,7 +627,7 @@ $('optCool').addEventListener('change',e=>{ST.set.cool=e.target.checked;persist(
 $('optSound').addEventListener('change',e=>{ST.set.sound=e.target.checked;persist()});
 $('optVoice').addEventListener('change',e=>{ST.set.voice=e.target.checked;persist()});
 $('phaseSel').addEventListener('change',e=>{ST.set.phase=+e.target.value;persist();load()});
-$('manual').addEventListener('click',()=>{const k=dk(dateFor(day.d));if(ST.log[k]&&ST.log[k][sk]){delete ST.log[k][sk];if(!Object.keys(ST.log[k]).length)delete ST.log[k];persist();renderAll()}else logEntry({manual:true})});
+$('manual').addEventListener('click',()=>openRec(dk(dateFor(day.d)),sk));
 $('calPrev').addEventListener('click',()=>renderCal(-1));
 $('calNext').addEventListener('click',()=>renderCal(1));
 

@@ -1,7 +1,7 @@
 /* 주짓수 홈 트레이닝 — service worker
    앱을 수정해서 배포할 때마다 아래 VERSION 숫자를 하나 올려줘.
    그래야 태블릿에서 "새 버전이 있어" 안내가 뜨고 새 파일로 바뀌어. */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const APP_CACHE = 'jj-app-' + VERSION;
 const FONT_CACHE = 'jj-fonts';
 const APP_SHELL = [
